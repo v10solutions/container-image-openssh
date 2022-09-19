@@ -1,0 +1,13 @@
+#
+# Container Image OpenSSH
+#
+
+.git/
+.gitignore
+.gitmodules
+.gitattributes
+
+.nova/
+.vscode/
+*.env
+**/.DS_Store

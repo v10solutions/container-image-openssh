@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#
+# Container Image OpenSSH
+#
+
+set -o "errexit"
+set -o "nounset"
+set -o "pipefail"
+
+now_iso8601=${1:-$(${BIN_DATE} -u -Iseconds)}
+now_epoch=$(${BIN_DATE} -d "${now_iso8601}" "+%s")
+timestamp=$((${now_epoch} / 60))
+hash="0x1${2:-0}"
+printf "%d.%d" "${timestamp}" "${hash}"

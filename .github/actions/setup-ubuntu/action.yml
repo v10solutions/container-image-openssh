@@ -1,0 +1,61 @@
+#
+# Container Image OpenSSH
+#
+
+name: Setup ubuntu
+description: Prepares an ubuntu image with essential utilities
+inputs:
+  reg-usr:
+    description: Registry user
+    required: true
+  reg-pwd:
+    description: Registry password
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Set locale
+      shell: bash --noprofile --norc -o "errexit" -o "nounset" -o "pipefail" "{0}"
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y -o "APT::Install-Recommends=false;" "locales"
+        sudo update-locale LANG="C.UTF-8" LC_ALL="C.UTF-8"
+    - name: Set project variables
+      shell: bash --noprofile --norc -o "errexit" -o "nounset" -o "pipefail" "{0}"
+      run: |
+        echo "PROJ_ID=${{ github.event.repository.id }}" >> "${GITHUB_ENV}"
+        echo "PROJ_NAME=${{ github.event.repository.name }}" >> "${GITHUB_ENV}"
+        echo "PROJ_VERSION=$(make "printv-PROJ_VERSION")" >> "${GITHUB_ENV}"
+        echo "PROJ_BUILD_NUM=$(make "printv-PROJ_BUILD_NUM")" >> "${GITHUB_ENV}"
+        echo "PROJ_BUILD_DATE=$(make "printv-PROJ_BUILD_DATE")" >> "${GITHUB_ENV}"
+        echo "PROJ_PLATFORM_OS=linux" >> "${GITHUB_ENV}"
+        echo "PROJ_PLATFORM_ARCH=$(dpkg --print-architecture)" >> "${GITHUB_ENV}"
+        echo "PROJ_REPO=$(make "printv-PROJ_REPO")" >> "${GITHUB_ENV}"
+    - name: Install QEMU
+      shell: bash --noprofile --norc -o "errexit" -o "nounset" -o "pipefail" "{0}"
+      env:
+        QEMU_VERSION: '6.2.0'
+      run: |
+        sudo apt-get install -y -o "APT::Install-Recommends=false;" "qemu" "qemu-user-static"
+        sudo curl \
+          -L \
+          -f \
+          -o "/tmp/qemu-binfmt-conf.sh" \
+          "https://raw.githubusercontent.com/qemu/qemu/v${{ env.QEMU_VERSION }}/scripts/qemu-binfmt-conf.sh"
+        sudo chmod "755" "/tmp/qemu-binfmt-conf.sh"
+        sudo find "/proc/sys/fs/binfmt_misc" \
+          -mindepth "1" \
+          -type "f" \
+          -iname "qemu-*" \
+          -exec bash --noprofile --norc -c "echo \"-1\" > \"{}\"" ";"
+        sudo /tmp/qemu-binfmt-conf.sh \
+          --qemu-path "/usr/bin" \
+          --qemu-suffix "-static" \
+          --persistent "yes"
+        sudo rm -f "/tmp/qemu-binfmt-conf.sh"
+    - name: Login to registry
+      shell: bash --noprofile --norc -o "errexit" -o "nounset" -o "pipefail" "{0}"
+      env:
+        IMG_REG_USR: '${{ inputs.reg-usr }}'
+        IMG_REG_PWD: '${{ inputs.reg-pwd }}'
+      run: make "img-reg-login"

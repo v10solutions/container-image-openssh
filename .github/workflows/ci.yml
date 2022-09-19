@@ -1,0 +1,57 @@
+#
+# Container Image OpenSSH
+#
+
+name: CI
+on:
+  push:
+    branches:
+      - '*'
+    tags-ignore:
+      - '*'
+  workflow_call:
+defaults:
+  run:
+    shell: bash --noprofile --norc -o "errexit" -o "nounset" -o "pipefail" "{0}"
+jobs:
+  img-build:
+    name: Build image
+    strategy:
+      max-parallel: 1
+      matrix:
+        os:
+          - linux
+        arch:
+          - amd64
+          - arm64
+        include:
+          - os: linux
+            image: ubuntu-22.04
+    runs-on: ${{ matrix.image }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3.0.2
+        with:
+          lfs: true
+          submodules: recursive
+      - name: Setup ${{ matrix.image }}
+        uses: ./.github/actions/setup-ubuntu
+        if: contains(matrix.image, 'ubuntu')
+        with:
+          reg-usr: '${{ secrets.DOCKERHUB_USR }}'
+          reg-pwd: '${{ secrets.DOCKERHUB_PWD }}'
+      - name: Build ${{ matrix.os }}/${{ matrix.arch }} image
+        env:
+          PROJ_PLATFORM_OS: '${{ matrix.os }}'
+          PROJ_PLATFORM_ARCH: '${{ matrix.arch }}'
+        run: |
+          make "buildx-create"
+          make "buildx-use"
+          make "img-build"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3.1.0
+        with:
+          name: '${{ env.PROJ_NAME }}_${{ env.PROJ_BUILD_NUM }}'
+          path: '${{ github.workspace }}/.output'
+          retention-days: 30
+          if-no-files-found: error

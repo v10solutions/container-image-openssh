@@ -1,0 +1,6 @@
+#
+# Container Image OpenSSH
+#
+
+etc/ssh/ssh_host_*_key binary
+etc/ssh/ssh_host_*_key.pub binary

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#
+# Container Image OpenSSH
+#
+
+set -o "errexit"
+set -o "nounset"
+set -o "pipefail"
+
+manifests=()
+
+for file in "${@}"
+do
+	img_name=$(${BIN_DOCKER} image load -q -i "${file}" 2> "/dev/null" || printf "")
+	if [[ -n "${img_name}" ]]
+	then
+		img_name=$(printf "${img_name}" | ${BIN_AWK} "{print \$3}" | tr -d "\n")
+		manifests+=(-a "${img_name}")
+		${BIN_DOCKER} image push "${img_name}"
+	fi
+done
+
+if (( ${#manifests[@]} > 0 ))
+then
+	${BIN_DOCKER} manifest create "${IMG_REG_URL}/${IMG_REPO}:${IMG_TAG_PFX}" "${manifests[@]}"
+	${BIN_DOCKER} manifest push "${IMG_REG_URL}/${IMG_REPO}:${IMG_TAG_PFX}"
+fi
+
+${BIN_GH} release create "${GIT_TAG}" \
+	--title "${GIT_TAG}" \
+	--generate-notes "${@}"

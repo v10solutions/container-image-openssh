@@ -1,0 +1,43 @@
+#
+# Container Image OpenSSH
+#
+
+name: Release
+on:
+  push:
+    branches-ignore:
+      - '*'
+    tags:
+      - v[0-9]*
+defaults:
+  run:
+    shell: bash --noprofile --norc -o "errexit" -o "nounset" -o "pipefail" "{0}"
+jobs:
+  run-ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+  release:
+    name: Release
+    needs: run-ci
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3.0.2
+        with:
+          lfs: true
+          submodules: recursive
+      - name: Setup ubuntu
+        uses: ./.github/actions/setup-ubuntu
+        with:
+          reg-usr: '${{ secrets.DOCKERHUB_USR }}'
+          reg-pwd: '${{ secrets.DOCKERHUB_PWD }}'
+      - name: Download artifact
+        uses: actions/download-artifact@v3.0.0
+        with:
+          name: '${{ env.PROJ_NAME }}_${{ env.PROJ_BUILD_NUM }}'
+          path: '${{ github.workspace }}/.output'
+      - name: Create release
+        env:
+          GH_TOKEN: '${{ github.token }}'
+        run: make "release-create"

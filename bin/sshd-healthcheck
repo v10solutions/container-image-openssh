@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#
+# Container Image OpenSSH
+#
+
+set -o "errexit"
+set -o "nounset"
+set -o "pipefail"
+
+nc -w "${2}" -z "$(hostname -f)" "${1}"

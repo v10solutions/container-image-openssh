@@ -1,0 +1,10 @@
+#
+# Container Image OpenSSH
+#
+
+.nova/
+.vscode/
+*.env
+**/.DS_Store
+
+.output/
